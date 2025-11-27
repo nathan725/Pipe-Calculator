@@ -120,7 +120,7 @@ function menu(e, type, p, j=null) {
       if (n && n !== p) { projects[n] = projects[p]; delete projects[p]; curP = n; save(); render(); }
     });
     add('Delete Project', () => {
-      if (confirm('Delete entire project “‘+p+'” and all jobs?')) { delete projects[p]; curP=curJ=null; save(); render(); }
+      if (confirm('Delete entire project "'+p+'" and all jobs?')) { delete projects[p]; curP=curJ=null; save(); render(); }
     });
   } else {
     add('Rename Job', () => {
@@ -128,7 +128,7 @@ function menu(e, type, p, j=null) {
       if (n && n !== j) { projects[p][n] = projects[p][j]; delete projects[p][j]; if(curJ===j) curJ=n; save(); render(); }
     });
     add('Delete Job', () => {
-      if (confirm('Delete job “‘+j+'”?')) { delete projects[p][j]; curJ=null; save(); render(); }
+      if (confirm('Delete job "'+j+'"?')) { delete projects[p][j]; curJ=null; save(); render(); }
     });
   }
 
