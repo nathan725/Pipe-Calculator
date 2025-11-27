@@ -3,29 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PipeBoss – Bedding + Cover Calculator</title>
+<title>PipeBoss – Final Working Version</title>
 <style>
   body{font-family:Arial,sans-serif;margin:0;background:#f1f5f9;height:100vh;display:flex;flex-direction:column;}
   .top{padding:15px;background:#2c3e50;color:white;text-align:center;}
   .top h1{margin:0;font-size:1.4em;}
-  .split{flex:1;display:flex;}
+  .split{flex:1;display:flex;overflow:hidden;}
   .sidebar{width:340px;background:#2c3e50;color:white;padding:15px;overflow-y:auto;}
   .main{flex:1;padding:20px;background:#fff;overflow-y:auto;}
   input,button{width:100%;padding:10px;margin:6px 0;border-radius:6px;border:none;box-sizing:border-box;}
   input{background:#34495e;color:white;}
   button{background:#3498db;color:white;font-weight:bold;cursor:pointer;}
   button:hover{background:#2980b9;}
-  .tree-item{padding:10px 8px;cursor:pointer;border-bottom:1px solid #34495e;position:relative;}
+  .tree-item{padding:10px 8px;cursor:pointer;border-bottom:1px solid #34495e;position:relative;user-select:none;}
   .project{background:#34495e;font-weight:bold;}
   .job{padding-left:35px;background:#3d566e;}
   .tree-item:hover{background:#4a6785;}
   .active{background:#e67e22 !important;}
-  .ctx{position:absolute;background:#111;color:white;padding:8px 0;border-radius:6px;box-shadow:0 4px 15px rgba(0,0,0,.6);z-index:1000;}
-  .ctx div{padding:8px 20px;cursor:pointer;}
+  .ctx{position:fixed;background:#111;color:white;padding:8px 0;border-radius:6px;box-shadow:0 4px 15px rgba(0,0,0,.6);z-index:10000;}
+  .ctx div{padding:8px 20px;cursor:pointer;white-space:nowrap;}
   .ctx div:hover{background:#3498db;}
   .results{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:20px;}
   .card{padding:18px;border-radius:10px;text-align:center;color:white;font-size:1.3em;}
-  .bed{background:#e67e22;}
+  .bed{background:#e:#e67e22;}
   .cov{background:#2980b9;}
   .tot{background:#27ae60;grid-column:span 2;}
 </style>
@@ -36,7 +36,7 @@
 
 <div class="split">
   <div class="sidebar">
-    <input type="text" id="newProj" placeholder="New project name (e.g. Walmart – Tucson)">
+    <input type="text" id="newProj" placeholder="New project name">
     <button onclick="addProject()">+ Add Project</button>
     <hr style="border-color:#444;margin:20px 0">
     <div id="tree"></div>
@@ -67,91 +67,103 @@
 let projects = JSON.parse(localStorage.getItem('pipeBoss2025')) || {};
 let curP = null, curJ = null;
 
-function save(){ localStorage.setItem('pipeBoss2025', JSON.stringify(projects)); }
-
-function render(); }
-
-function render(){
-  const t=document.getElementById('tree'); t.innerHTML='';
-  Object.keys(projects).sort().forEach(p=>{
-    const pd=document.createElement('div');
-    pd.className='tree-item project'+(curP===p?' active':'');
-    pd.textContent = 'Project: '+p;
-    pd.oncontextmenu=e=>menu(e,'proj',p);
-    pd.onclick=()=>{ curP=p; curJ=null; document.getElementById('title').textContent=p; render(); };
+function save() { localStorage.setItem('pipeBoss2025', JSON.stringify(projects)); }
+function render() {
+  const t = document.getElementById('tree'); t.innerHTML = '';
+  Object.keys(projects).sort().forEach(p => {
+    const pd = document.createElement('div');
+    pd.className = 'tree-item project' + (curP===p?' active':'');
+    pd.textContent = p;
+    pd.onclick = () => { curP = p; curJ = null; document.getElementById('title').textContent = p; render(); calculate(); };
+    pd.oncontextmenu = e => menu(e, 'proj', p);
     t.appendChild(pd);
 
-    Object.keys(projects[p]).sort().forEach(j=>{
-      const jd=document.createElement('div');
-      jd.className='tree-item job'+(curP===p&&curJ===j?' active':'');
-      jd.textContent='└ '+j;
-      jd.oncontextmenu=e=>menu(e,'job',p,j);
-      jd.onclick=()=>{ loadJob(p,j); };
+    Object.keys(projects[p]).sort().forEach(j => {
+      const jd = document.createElement('div');
+      jd.className = 'tree-item job' + (curP===p && curJ===j?' active':'');
+      jd.textContent = '└ ' + j;
+      jd.onclick = () => loadJob(p, j);
+      jd.oncontextmenu = e => menu(e, 'job', p, j);
       t.appendChild(jd);
-    }));
+    });
   });
 }
 
-function menu(e,type,p,j=null){
-  e.preventDefault();
-  let m=document.getElementById('ctx');
-  if(!m){ m=document.createElement('div'); m.id='ctx'; m.className='ctx'; document.body.appendChild(m); }
-  m.innerHTML='';
-  const add=(txt,fn)=>{ const d=document.createElement('div'); d.textContent=txt; d.onclick=()=>{fn();m.style.display='none';}; m.appendChild(d); };
+function menu(e, type, p, j=null) {
+  e.preventDefault(); e.stopPropagation();
+  const old = document.getElementById('ctx');
+  if (old) old.remove();
 
-  if(type==='proj'){
-    add('Add Job',()=>{ const n=prompt('Job name:'); if(n){ projects[p][n]={d:10.35,w:3,bb:0.5,ca:0.5,l:89,t:1.8}; curJ=n; save(); loadJob(p,n); }});
-    add('Rename Project',()=>{ const n=prompt('New name',p); if(n&&n!==p){projects[n]=projects[p];delete projects[p];curP=n;save();}});
-    add('Delete Project',()=>{if(confirm('Delete “‘+p+'” and all jobs?')){delete projects[p];curP=curJ=null;save();}});
-  }else{
-    add('Rename Job',()=>{ const n=prompt('New name',j); if(n&&n!==j){projects[p][n]=projects[p][j];delete projects[p][j];if(curJ===j)curJ=n;save();}});
-    add('Delete Job',()=>{if(confirm('Delete job “‘+j+'”?')){delete projects[p][j];curJ=null;save();}});
+  const m = document.createElement('div');
+  m.id = 'ctx'; m.className = 'ctx';
+  document.body.appendChild(m);
+
+  const add = (txt, fn) => {
+    const d = document.createElement('div');
+    d.textContent = txt;
+    d.onclick = () => { fn(); m.remove(); };
+    m.appendChild(d);
+  };
+
+  if (type === 'proj') {
+    add('Add New Job', () => {
+      const name = prompt('Job name (e.g. 8" Sanitary Sewer):');
+      if (name && name.trim()) {
+        projects[p][name.trim()] = {d:10.35,w:3,bb:0.5,ca:0.5,l:89,t:1.8};
+        curJ = name.trim();
+        save(); render(); loadJob(p, curJ);
+      }
+    });
+    add('Rename Project', () => {
+      const n = prompt('New project name', p);
+      if (n && n !== p) { projects[n] = projects[p]; delete projects[p]; curP = n; save(); render(); }
+    });
+    add('Delete Project', () => {
+      if (confirm('Delete entire project “‘+p+'” and all jobs?')) { delete projects[p]; curP=curJ=null; save(); render(); }
+    });
+  } else {
+    add('Rename Job', () => {
+      const n = prompt('New job name', j);
+      if (n && n !== j) { projects[p][n] = projects[p][j]; delete projects[p][j]; if(curJ===j) curJ=n; save(); render(); }
+    });
+    add('Delete Job', () => {
+      if (confirm('Delete job “‘+j+'”?')) { delete projects[p][j]; curJ=null; save(); render(); }
+    });
   }
-  m.style.left=e.pageX+'px';
-  m.style.top=e.pageY+'px';
-  m.style.display='block';
-  document.onclick=()=>{m.style.display='none';};
+
+  m.style.left = e.pageX + 'px';
+  m.style.top = e.pageY + 'px';
 }
 
-function addProject(){
-  const n=document.getElementById('newProj').value.trim();
-  if(!n) return alert('Type a project name first');
-  if(projects[n]) return alert('Project already exists');
-  projects[n]={};
-  curP=n; curJ=null;
+function addProject() {
+  const n = document.getElementById('newProj').value.trim();
+  if (!n) return alert('Enter a project name');
+  if (projects[n]) return alert('Project already exists');
+  projects[n] = {};
+  curP = n;
   save();
-  document.getElementById('newProj').value='';
+  document.getElementById('newProj').value = '';
+  render();
 }
 
-function loadJob(p,j){
-  curP=p; curJ=j;
-  const o=projects[p][j];
-  document.getElementById('d').value=o.d;
-  document.getElementById('w').value=o.w;
-  document.getElementById('bb').value=o.bb;
-  document.getElementById('ca').value=o.ca;
-  document.getElementById('l').value=o.l;
-  document.getElementById('t').value=o.t;
-  document.getElementById('title').textContent=p+' → '+j;
+function loadJob(p, j) {
+  curP = p; curJ = j;
+  const o = projects[p][j];
+  ['d','w','bb','ca','l','t'].forEach(id => document.getElementById(id).value = o[id]);
+  document.getElementById('title').textContent = p + ' → ' + j;
   calculate();
   render();
 }
 
-function saveJob(){
-  if(!curP||!curJ) return alert('Select a job first');
-  projects[curP][curJ]={
-    d:+document.getElementById('d').value,
-    w:+document.getElementById('w').value,
-    bb:+document.getElementById('bb').value,
-    ca:+document.getElementById('ca').value,
-    l:+document.getElementById('l').value,
-    t:+document.getElementById('t').value
-  };
+function saveJob() {
+  if (!curP || !curJ) return alert('First select or create a job');
+  const o = {d,w,bb,ca,l,t}.reduce((a,id)=>(a[id]=+document.getElementById(id).value,a), {});
+  projects[curP][curJ] = o;
   save();
-  alert('Job saved');
+  alert('Job saved!');
 }
 
-function calculate(){
+function calculate() {
   const dIn=+document.getElementById('d').value||0, w=+document.getElementById('w').value||0,
         bb=+document.getElementById('bb').value||0, ca=+document.getElementById('ca').value||0,
         len=+document.getElementById('l').value||0, tcy=+document.getElementById('t').value||1.8;
@@ -170,16 +182,4 @@ function calculate(){
   const svg=document.getElementById('svg'); svg.innerHTML='';
   const s=80, cx=200, yb=360, totH=bb+dFt+ca;
   svg.innerHTML+=`<rect x="${cx-w*s/2}" y="${yb-totH*s}" width="${w*s}" height="${totH*s}" fill="none" stroke="#333" stroke-width="3"/>`;
-  svg.innerHTML+=`<rect x="${cx-w*s/2}" y="${yb-bedH*s}" width="${w*s}" height="${bedH*s}" fill="#e67e22" opacity="0.65"/>`;
-  svg.innerHTML+=`<rect x="${cx-w*s/2}" y="${yb-(bedH+ca)*s}" width="${w*s}" height="${ca*s}" fill="#3498db" opacity="0.65"/>`;
-  const py=yb-bb*s-r*s;
-  svg.innerHTML+=`<circle cx="${cx}" cy="${py}" r="${r*s}" fill="#2c3e50"/>`;
-  svg.innerHTML+=`<text x="${cx}" y="${py+6}" text-anchor="middle" fill="white" font-size="14">${dIn.toFixed(1)}"</text>`;
-}
-
-document.querySelectorAll('input').forEach(i=>i.addEventListener('input',calculate));
-render();
-calculate();
-</script>
-</body>
-</html>
+  svg.innerHTML+=`<rect x="${cx-w*s/2}" y="${yb-bedH*s}" width="${w*s}" height="${
