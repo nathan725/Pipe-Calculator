@@ -25,7 +25,7 @@
   .ctx div:hover{background:#3498db;}
   .results{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:20px;}
   .card{padding:18px;border-radius:10px;text-align:center;color:white;font-size:1.3em;}
-  .bed{background:#e:#e67e22;}
+  .bed{background:#e67e22;}
   .cov{background:#2980b9;}
   .tot{background:#27ae60;grid-column:span 2;}
 </style>
@@ -68,11 +68,12 @@ let projects = JSON.parse(localStorage.getItem('pipeBoss2025')) || {};
 let curP = null, curJ = null;
 
 function save() { localStorage.setItem('pipeBoss2025', JSON.stringify(projects)); }
+
 function render() {
   const t = document.getElementById('tree'); t.innerHTML = '';
   Object.keys(projects).sort().forEach(p => {
     const pd = document.createElement('div');
-    pd.className = 'tree-item project' + (curP===p?' active':'');
+    pd.className = 'tree-item project' + (curP===p ? ' active' : '');
     pd.textContent = p;
     pd.onclick = () => { curP = p; curJ = null; document.getElementById('title').textContent = p; render(); calculate(); };
     pd.oncontextmenu = e => menu(e, 'proj', p);
@@ -80,7 +81,7 @@ function render() {
 
     Object.keys(projects[p]).sort().forEach(j => {
       const jd = document.createElement('div');
-      jd.className = 'tree-item job' + (curP===p && curJ===j?' active':'');
+      jd.className = 'tree-item job' + (curP===p && curJ===j ? ' active' : '');
       jd.textContent = '└ ' + j;
       jd.onclick = () => loadJob(p, j);
       jd.oncontextmenu = e => menu(e, 'job', p, j);
@@ -157,29 +158,52 @@ function loadJob(p, j) {
 
 function saveJob() {
   if (!curP || !curJ) return alert('First select or create a job');
-  const o = {d,w,bb,ca,l,t}.reduce((a,id)=>(a[id]=+document.getElementById(id).value,a), {});
-  projects[curP][curJ] = o;
+  projects[curP][curJ] = {
+    d: +document.getElementById('d').value,
+    w: +document.getElementById('w').value,
+    bb: +document.getElementById('bb').value,
+    ca: +document.getElementById('ca').value,
+    l: +document.getElementById('l').value,
+    t: +document.getElementById('t').value
+  };
   save();
   alert('Job saved!');
 }
 
 function calculate() {
-  const dIn=+document.getElementById('d').value||0, w=+document.getElementById('w').value||0,
-        bb=+document.getElementById('bb').value||0, ca=+document.getElementById('ca').value||0,
-        len=+document.getElementById('l').value||0, tcy=+document.getElementById('t').value||1.8;
-  const dFt=dIn/12, r=dFt/2, pipeA=Math.PI*r*r;
-  const bedH=bb+r, covH=r+ca;
-  const bedCY=(w*bedH*len/27)-(pipeA*len/2/27);
-  const covCY=(w*covH*len/27)-(pipeA*len/2/27);
-  const tot=bedCY+covCY;
+  const dIn = +document.getElementById('d').value || 0,
+        w   = +document.getElementById('w').value || 0,
+        bb  = +document.getElementById('bb').value || 0,
+        ca  = +document.getElementById('ca').value || 0,
+        len = +document.getElementById('l').value || 0,
+        tcy = +document.getElementById('t').value || 1.8;
 
-  document.getElementById('results').innerHTML=`
+  const dFt = dIn/12, r = dFt/2, pipeA = Math.PI*r*r;
+  const bedH = bb + r, covH = r + ca;
+  const bedCY = (w * bedH * len / 27) - (pipeA * len / 2 / 27);
+  const covCY = (w * covH * len / 27) - (pipeA * len / 2 / 27);
+  const totCY = bedCY + covCY;
+
+  document.getElementById('results').innerHTML = `
     <div class="card bed"><b>BEDDING</b><br>${bedCY.toFixed(2)} CY<br><b>${(bedCY*tcy).toFixed(1)} Tons</b></div>
     <div class="card cov"><b>COVER</b><br>${covCY.toFixed(2)} CY<br><b>${(covCY*tcy).toFixed(1)} Tons</b></div>
-    <div class="card tot"><b>TOTAL</b><br>${tot.toFixed(2)} CY • ${(tot*tcy).toFixed(1)} Tons</b></div>
+    <div class="card tot"><b>TOTAL</b><br>${totCY.toFixed(2)} CY • ${(totCY*tcy).toFixed(1)} Tons</b></div>
   `;
 
-  const svg=document.getElementById('svg'); svg.innerHTML='';
-  const s=80, cx=200, yb=360, totH=bb+dFt+ca;
-  svg.innerHTML+=`<rect x="${cx-w*s/2}" y="${yb-totH*s}" width="${w*s}" height="${totH*s}" fill="none" stroke="#333" stroke-width="3"/>`;
-  svg.innerHTML+=`<rect x="${cx-w*s/2}" y="${yb-bedH*s}" width="${w*s}" height="${
+  const svg = document.getElementById('svg'); svg.innerHTML = '';
+  const s = 80, cx = 200, yb = 360, totH = bb + dFt + ca;
+  svg.innerHTML += `<rect x="${cx-w*s/2}" y="${yb-totH*s}" width="${w*s}" height="${totH*s}" fill="none" stroke="#333" stroke-width="3"/>`;
+  svg.innerHTML += `<rect x="${cx-w*s/2}" y="${yb-bedH*s}" width="${w*s}" height="${bedH*s}" fill="#e67e22" opacity="0.65"/>`;
+  svg.innerHTML += `<rect x="${cx-w*s/2}" y="${yb-(bedH+ca)*s}" width="${w*s}" height="${ca*s}" fill="#3498db" opacity="0.65"/>`;
+  const py = yb - bb*s - r*s;
+  svg.innerHTML += `<circle cx="${cx}" cy="${py}" r="${r*s}" fill="#2c3e50"/>`;
+  svg.innerHTML += `<text x="${cx}" y="${py+6}" text-anchor="middle" fill="white" font-size="14">${dIn.toFixed(1)}"</text>`;
+}
+
+document.querySelectorAll('input').forEach(i => i.addEventListener('input', calculate));
+document.addEventListener('click', () => { const m = document.getElementById('ctx'); if(m) m.remove(); });
+render();
+calculate();
+</script>
+</body>
+</html>
