@@ -3,24 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pipe Bedding Calculator – Projects + Delete/Rename</title>
+<title>PipeBoss – Bedding + Cover Calculator</title>
 <style>
-  body{font-family:Arial,sans-serif;margin:0;background:#f1f5f9;height:100vh;display:flex;}
+  body{font-family:Arial,sans-serif;margin:0;background:#f1f5f9;height:100vh;display:flex;flex-direction:column;}
+  .top{padding:15px;background:#2c3e50;color:white;text-align:center;}
+  .top h1{margin:0;font-size:1.4em;}
+  .split{flex:1;display:flex;}
   .sidebar{width:340px;background:#2c3e50;color:white;padding:15px;overflow-y:auto;}
   .main{flex:1;padding:20px;background:#fff;overflow-y:auto;}
-  h1{color:#ecf0f1;margin:0 0 20px;}
   input,button{width:100%;padding:10px;margin:6px 0;border-radius:6px;border:none;box-sizing:border-box;}
   input{background:#34495e;color:white;}
   button{background:#3498db;color:white;font-weight:bold;cursor:pointer;}
   button:hover{background:#2980b9;}
-  .tree-item{padding:10px 8px;cursor:pointer;position:relative;border-bottom:1px solid #34495e;}
+  .tree-item{padding:10px 8px;cursor:pointer;border-bottom:1px solid #34495e;position:relative;}
   .project{background:#34495e;font-weight:bold;}
   .job{padding-left:35px;background:#3d566e;}
   .tree-item:hover{background:#4a6785;}
   .active{background:#e67e22 !important;}
-  .ctx-menu{position:absolute;background:#222;color:white;padding:8px;border-radius:6px;box-shadow:0 4px 10px rgba(0,0,0,.5);z-index:100;}
-  .ctx-menu div{padding:8px 12px;cursor:pointer;}
-  .ctx-menu div:hover{background:#444;}
+  .ctx{position:absolute;background:#111;color:white;padding:8px 0;border-radius:6px;box-shadow:0 4px 15px rgba(0,0,0,.6);z-index:1000;}
+  .ctx div{padding:8px 20px;cursor:pointer;}
+  .ctx div:hover{background:#3498db;}
   .results{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:20px;}
   .card{padding:18px;border-radius:10px;text-align:center;color:white;font-size:1.3em;}
   .bed{background:#e67e22;}
@@ -30,161 +32,149 @@
 </head>
 <body>
 
-<div class="sidebar">
-  <h1>PipeBoss Calculator</h1>
-  <input type="text" id="newProj" placeholder="New project name">
-  <button onclick="addProject()">+ Add Project</button>
-  <hr style="border-color:#444;margin:15px 0">
-  <div id="tree"></div>
-</div>
+<div class="top"><h1>PipeBoss Calculator</h1></div>
 
-<div class="main">
-  <div style="display:flex;flex-wrap:wrap;gap:20px;">
-    <div style="flex:1;min-width:300px;">
-      <h2 id="currentTitle">Select or create a job</h2>
-      <label>Pipe Diameter (inches)</label><input type="number" id="d" step="0.01" value="10.35">
-      <label>Trench Width (ft)</label><input type="number" id="w" step="0.1" value="3">
-      <label>Bedding Below Invert (ft)</label><input type="number" id="bb" step="0.05" value="0.5">
-      <label>Cover Above Crown (ft)</label><input type="number" id="ca" step="0.1" value="0.5">
-      <label>Length (ft)</label><input type="number" id="l" step="1" value="89">
-      <label>Tons per CY</label><input type="number" id="t" step="0.05" value="1.8">
-      <button onclick="saveJob()">Save This Job</button>
-    </div>
-    <div style="flex:1;min-width:350px;background:#f8f9fa;padding:20px;border-radius:8px;">
-      <h3>Live Cross-Section</h3>
-      <svg id="svg" viewBox="0 0 400 420"></svg>
-    </div>
+<div class="split">
+  <div class="sidebar">
+    <input type="text" id="newProj" placeholder="New project name (e.g. Walmart – Tucson)">
+    <button onclick="addProject()">+ Add Project</button>
+    <hr style="border-color:#444;margin:20px 0">
+    <div id="tree"></div>
   </div>
-  <div class="results" id="results"></div>
+
+  <div class="main">
+    <h2 id="title">Select or create a job</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:20px;">
+      <div style="flex:1;min-width:300px;">
+        <label>Pipe Diameter (in)</label><input type="number" id="d" step="0.01" value="10.35">
+        <label>Trench Width (ft)</label><input type="number" id="w" step="0.1" value="3">
+        <label>Bedding Below Invert (ft)</label><input type="number" id="bb" step="0.05" value="0.5">
+        <label>Cover Above Crown (ft)</label><input type="number" id="ca" step="0.1" value="0.5">
+        <label>Length (ft)</label><input type="number" id="l" step="1" value="89">
+        <label>Tons per CY</label><input type="number" id="t" step="0.05" value="1.8">
+        <button onclick="saveJob()">Save Job</button>
+      </div>
+      <div style="flex:1;min-width:350px;background:#f8f9fa;padding:15px;border-radius:8px;">
+        <h3>Live Cross-Section</h3>
+        <svg id="svg" viewBox="0 0 400 420" style="width:100%;height:380px;background:#fff;border:1px solid #ddd;"></svg>
+      </div>
+    </div>
+    <div class="results" id="results"></div>
+  </div>
 </div>
 
 <script>
-<script>
-let projects = JSON.parse(localStorage.getItem('pipeProjects2025')) || {};
-let curProj = null, curJob = null;
+let projects = JSON.parse(localStorage.getItem('pipeBoss2025')) || {};
+let curP = null, curJ = null;
 
-function render() {
-  const t = document.getElementById('tree');
-  t.innerHTML = '';
-  Object.keys(projects).sort().forEach(p => {
-    const pd = document.createElement('div');
-    pd.className = 'tree-item project' + (curProj===p?' active':'');
-    pd.textContent = p;
-    pd.oncontextmenu = e => showMenu(e, 'proj', p);
-    pd.onclick = () => { curProj=p, curJob=null, render(), document.getElementById('currentTitle').textContent = p;
+function save(){ localStorage.setItem('pipeBoss2025', JSON.stringify(projects)); }
+
+function render(); }
+
+function render(){
+  const t=document.getElementById('tree'); t.innerHTML='';
+  Object.keys(projects).sort().forEach(p=>{
+    const pd=document.createElement('div');
+    pd.className='tree-item project'+(curP===p?' active':'');
+    pd.textContent = 'Project: '+p;
+    pd.oncontextmenu=e=>menu(e,'proj',p);
+    pd.onclick=()=>{ curP=p; curJ=null; document.getElementById('title').textContent=p; render(); };
     t.appendChild(pd);
 
-    Object.keys(projects[p]).sort().forEach(j => {
-      const jd = document.createElement('div');
-      jd.className = 'tree-item job' + (curProj===p && curJob===j?' active':'');
-      jd.textContent = '└ ' + j;
-      jd.oncontextmenu = e => showMenu(e, 'job', p, j);
-      jd.onclick = () => loadJob(p, j);
+    Object.keys(projects[p]).sort().forEach(j=>{
+      const jd=document.createElement('div');
+      jd.className='tree-item job'+(curP===p&&curJ===j?' active':'');
+      jd.textContent='└ '+j;
+      jd.oncontextmenu=e=>menu(e,'job',p,j);
+      jd.onclick=()=>{ loadJob(p,j); };
       t.appendChild(jd);
-    });
+    }));
   });
 }
 
-function showMenu(e, type, p, j=null) {
+function menu(e,type,p,j=null){
   e.preventDefault();
-  let menu = document.getElementById('ctx');
-  if (!menu) {
-    menu = document.createElement('div');
-    menu.id='ctx'; menu.className='ctx-menu';
-    document.body.appendChild(menu);
+  let m=document.getElementById('ctx');
+  if(!m){ m=document.createElement('div'); m.id='ctx'; m.className='ctx'; document.body.appendChild(m); }
+  m.innerHTML='';
+  const add=(txt,fn)=>{ const d=document.createElement('div'); d.textContent=txt; d.onclick=()=>{fn();m.style.display='none';}; m.appendChild(d); };
+
+  if(type==='proj'){
+    add('Add Job',()=>{ const n=prompt('Job name:'); if(n){ projects[p][n]={d:10.35,w:3,bb:0.5,ca:0.5,l:89,t:1.8}; curJ=n; save(); loadJob(p,n); }});
+    add('Rename Project',()=>{ const n=prompt('New name',p); if(n&&n!==p){projects[n]=projects[p];delete projects[p];curP=n;save();}});
+    add('Delete Project',()=>{if(confirm('Delete “‘+p+'” and all jobs?')){delete projects[p];curP=curJ=null;save();}});
+  }else{
+    add('Rename Job',()=>{ const n=prompt('New name',j); if(n&&n!==j){projects[p][n]=projects[p][j];delete projects[p][j];if(curJ===j)curJ=n;save();}});
+    add('Delete Job',()=>{if(confirm('Delete job “‘+j+'”?')){delete projects[p][j];curJ=null;save();}});
   }
-  menu.innerHTML = '';
-  if (type==='proj') {
-    addMenu('Rename Project',()=>{ let n=prompt('New name',p); if(n&&n!==p){projects[n]=projects[p];delete projects[p];curProj=n;save();render();}});
-    addMenu('Delete Project',()=>{if(confirm('Delete entire project “‘+p+'” and all jobs?')){delete projects[p];curProj=null;curJob=null;save();render();}});
-  } else {
-    addMenu('Rename Job',()=>{ let n=prompt('New job name',j); if(n&&n!==j){projects[p][n]=projects[p][j];delete projects[p][j];if(curJob===j)curJob=n;save();render();}});
-    addMenu('Delete Job',()=>{if(confirm('Delete job “‘+j+'” ?')){delete projects[p][j];curJob=null;save();render();}});
-  }
-  menu.style.left = e.pageX+'px';
-  menu.style.top = e.pageY+'px';
-  menu.style.display = 'block';
-  const hide = () => { menu.style.display='none'; document.removeEventListener('click',hide); };
-  setTimeout(()=>document.addEventListener('click',hide),0);
-  function addMenu(text,fn){ const d=document.createElement('div'); d.textContent=text; d.onclick=()=>{fn();hide();}; menu.appendChild(d); }
+  m.style.left=e.pageX+'px';
+  m.style.top=e.pageY+'px';
+  m.style.display='block';
+  document.onclick=()=>{m.style.display='none';};
 }
 
-function addProject() {
-  const n = document.getElementById('newProj').value.trim();
-  if (n && !projects[n]) {
-    projects[n] = {};
-    curProj = n;
-    save(); render();
-    document.getElementById('newProj').value='';
-    alert('Project “'+n+'” created! Now right-click it → “+ Job”');
-  }
+function addProject(){
+  const n=document.getElementById('newProj').value.trim();
+  if(!n) return alert('Type a project name first');
+  if(projects[n]) return alert('Project already exists');
+  projects[n]={};
+  curP=n; curJ=null;
+  save();
+  document.getElementById('newProj').value='';
 }
 
-function addJob() {
-  if (!curProj) return alert('First select/create a project');
-  const n = prompt('Job name (e.g. 8" Sanitary Sewer)');
-  if (n) {
-    projects[curProj][n] = {d:10.35,w:3,bb:0.5,ca:0.5,l:89,t:1.8};
-    curJob = n;
-    save(); render(); loadJob(curProj,n);
-  }
-}
-
-function loadJob(p, j) {
-  curProj = p; curJob = j;
-  const d = projects[p][j];
-  document.getElementById('d').value = d.d;
-  document.getElementById('w').value = d.w;
-  document.getElementById('bb').value = d.bb;
-  document.getElementById('ca').value = d.ca;
-  document.getElementById('l').value = d.l;
-  document.getElementById('t').value = d.t;
-  document.getElementById('currentTitle').textContent = p + ' → ' + j;
+function loadJob(p,j){
+  curP=p; curJ=j;
+  const o=projects[p][j];
+  document.getElementById('d').value=o.d;
+  document.getElementById('w').value=o.w;
+  document.getElementById('bb').value=o.bb;
+  document.getElementById('ca').value=o.ca;
+  document.getElementById('l').value=o.l;
+  document.getElementById('t').value=o.t;
+  document.getElementById('title').textContent=p+' → '+j;
   calculate();
   render();
 }
 
-function saveJob() {
-  if (!curProj || !curJob) return alert('Select a job first');
-  projects[curProj][curJob] = {
-    d: +document.getElementById('d').value,
-    w: +document.getElementById('w').value,
-    bb: +document.getElementById('bb').value,
-    ca: +document.getElementById('ca').value,
-    l: +document.getElementById('l').value,
-    t: +document.getElementById('t').value
+function saveJob(){
+  if(!curP||!curJ) return alert('Select a job first');
+  projects[curP][curJ]={
+    d:+document.getElementById('d').value,
+    w:+document.getElementById('w').value,
+    bb:+document.getElementById('bb').value,
+    ca:+document.getElementById('ca').value,
+    l:+document.getElementById('l').value,
+    t:+document.getElementById('t').value
   };
   save();
-  alert('Job saved!');
+  alert('Job saved');
 }
 
-function save(){ localStorage.setItem('pipeProjects2025', JSON.stringify(projects)); }
-
-function calculate() {
+function calculate(){
   const dIn=+document.getElementById('d').value||0, w=+document.getElementById('w').value||0,
         bb=+document.getElementById('bb').value||0, ca=+document.getElementById('ca').value||0,
         len=+document.getElementById('l').value||0, tcy=+document.getElementById('t').value||1.8;
   const dFt=dIn/12, r=dFt/2, pipeA=Math.PI*r*r;
   const bedH=bb+r, covH=r+ca;
-  const bedCY = (w*bedH*len/27) - (pipeA*len/2/27);
-  const covCY = (w*covH*len/27) - (pipeA*len/2/27);
-  const totCY = bedCY + covCY;
+  const bedCY=(w*bedH*len/27)-(pipeA*len/2/27);
+  const covCY=(w*covH*len/27)-(pipeA*len/2/27);
+  const tot=bedCY+covCY;
 
-  document.getElementById('results').innerHTML = `
+  document.getElementById('results').innerHTML=`
     <div class="card bed"><b>BEDDING</b><br>${bedCY.toFixed(2)} CY<br><b>${(bedCY*tcy).toFixed(1)} Tons</b></div>
     <div class="card cov"><b>COVER</b><br>${covCY.toFixed(2)} CY<br><b>${(covCY*tcy).toFixed(1)} Tons</b></div>
-    <div class="card tot"><b>TOTAL</b><br>${totCY.toFixed(2)} CY • ${(totCY*tcy).toFixed(1)} Tons</b></div>
+    <div class="card tot"><b>TOTAL</b><br>${tot.toFixed(2)} CY • ${(tot*tcy).toFixed(1)} Tons</b></div>
   `;
 
-  // diagram code exactly like before …
   const svg=document.getElementById('svg'); svg.innerHTML='';
   const s=80, cx=200, yb=360, totH=bb+dFt+ca;
-  svg.innerHTML += `<rect x="${cx-w*s/2}" y="${yb-totH*s}" width="${w*s}" height="${totH*s}" fill="none" stroke="#333" stroke-width="3"/>`;
-  svg.innerHTML += `<rect x="${cx-w*s/2}" y="${yb-bedH*s}" width="${w*s}" height="${bedH*s}" fill="#e67e22" opacity="0.65"/>`;
-  svg.innerHTML += `<rect x="${cx-w*s/2}" y="${yb-(bedH+ca)*s}" width="${w*s}" height="${ca*s}" fill="#3498db" opacity="0.65"/>`;
-  const py = yb - bb*s - r*s;
-  svg.innerHTML += `<circle cx="${cx}" cy="${py}" r="${r*s}" fill="#2c3e50"/>`;
-  svg.innerHTML += `<text x="${cx}" y="${py+5}" text-anchor="middle" fill="white" font-size="14">${dIn.toFixed(1)}"</text>`;
+  svg.innerHTML+=`<rect x="${cx-w*s/2}" y="${yb-totH*s}" width="${w*s}" height="${totH*s}" fill="none" stroke="#333" stroke-width="3"/>`;
+  svg.innerHTML+=`<rect x="${cx-w*s/2}" y="${yb-bedH*s}" width="${w*s}" height="${bedH*s}" fill="#e67e22" opacity="0.65"/>`;
+  svg.innerHTML+=`<rect x="${cx-w*s/2}" y="${yb-(bedH+ca)*s}" width="${w*s}" height="${ca*s}" fill="#3498db" opacity="0.65"/>`;
+  const py=yb-bb*s-r*s;
+  svg.innerHTML+=`<circle cx="${cx}" cy="${py}" r="${r*s}" fill="#2c3e50"/>`;
+  svg.innerHTML+=`<text x="${cx}" y="${py+6}" text-anchor="middle" fill="white" font-size="14">${dIn.toFixed(1)}"</text>`;
 }
 
 document.querySelectorAll('input').forEach(i=>i.addEventListener('input',calculate));
