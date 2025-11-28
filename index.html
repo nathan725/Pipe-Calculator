@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PipeBoss – Final Working Version</title>
+<title>PipeBoss – Final Fixed & Perfect</title>
 <style>
   body{font-family:Arial,sans-serif;margin:0;background:#f1f5f9;height:100vh;display:flex;flex-direction:column;}
   .top{padding:15px;background:#2c3e50;color:white;text-align:center;}
@@ -15,11 +15,11 @@
   input{background:#34495e;color:white;}
   button{background:#3498db;color:white;font-weight:bold;cursor:pointer;}
   button:hover{background:#2980b9;}
-  .tree-item{padding:10px 8px;cursor:pointer;border-bottom:1px solid #34495e;position:relative;user-select:none;}
+  .tree-item{padding:10px 8px;cursor:pointer;border-bottom:1px solid #34495e;user-select:none;}
   .project{background:#34495e;font-weight:bold;}
   .job{padding-left:35px;background:#3d566e;}
   .tree-item:hover{background:#4a6785;}
-  .active{background:#e67e22 !important;}
+  .active{background:#e67e22 !important;color:white;}
   .ctx{position:fixed;background:#111;color:white;padding:8px 0;border-radius:6px;box-shadow:0 4px 15px rgba(0,0,0,.6);z-index:10000;}
   .ctx div{padding:8px 20px;cursor:pointer;white-space:nowrap;}
   .ctx div:hover{background:#3498db;}
@@ -31,9 +31,7 @@
 </style>
 </head>
 <body>
-
 <div class="top"><h1>PipeBoss Calculator</h1></div>
-
 <div class="split">
   <div class="sidebar">
     <input type="text" id="newProj" placeholder="New project name">
@@ -41,7 +39,6 @@
     <hr style="border-color:#444;margin:20px 0">
     <div id="tree"></div>
   </div>
-
   <div class="main">
     <h2 id="title">Select or create a job</h2>
     <div style="display:flex;flex-wrap:wrap;gap:20px;">
@@ -67,10 +64,13 @@
 let projects = JSON.parse(localStorage.getItem('pipeBoss2025')) || {};
 let curP = null, curJ = null;
 
-function save() { localStorage.setItem('pipeBoss2025', JSON.stringify(projects)); }
+function save() { 
+  localStorage.setItem('pipeBoss2025', JSON.stringify(projects)); 
+}
 
 function render() {
-  const t = document.getElementById('tree'); t.innerHTML = '';
+  const t = document.getElementById('tree'); 
+  t.innerHTML = '';
   Object.keys(projects).sort().forEach(p => {
     const pd = document.createElement('div');
     pd.className = 'tree-item project' + (curP===p ? ' active' : '');
@@ -91,10 +91,9 @@ function render() {
 }
 
 function menu(e, type, p, j=null) {
-  e.preventDefault(); e.stopPropagation();
+  e.preventDefault();
   const old = document.getElementById('ctx');
   if (old) old.remove();
-
   const m = document.createElement('div');
   m.id = 'ctx'; m.className = 'ctx';
   document.body.appendChild(m);
@@ -120,18 +119,26 @@ function menu(e, type, p, j=null) {
       if (n && n !== p) { projects[n] = projects[p]; delete projects[p]; curP = n; save(); render(); }
     });
     add('Delete Project', () => {
-      if (confirm('Delete entire project "'+p+'" and all jobs?')) { delete projects[p]; curP=curJ=null; save(); render(); }
+      if (confirm('Delete entire project "'+p+'" and all jobs?')) { 
+        delete projects[p]; curP=curJ=null; save(); render(); 
+      }
     });
   } else {
     add('Rename Job', () => {
       const n = prompt('New job name', j);
-      if (n && n !== j) { projects[p][n] = projects[p][j]; delete projects[p][j]; if(curJ===j) curJ=n; save(); render(); }
+      if (n && n !== j) { 
+        projects[p][n] = projects[p][j]; 
+        delete projects[p][j]; 
+        if(curJ===j) curJ=n; 
+        save(); render(); 
+      }
     });
     add('Delete Job', () => {
-      if (confirm('Delete job "'+j+'"?')) { delete projects[p][j]; curJ=null; save(); render(); }
+      if (confirm('Delete job "'+j+'"?')) { 
+        delete projects[p][j]; curJ=null; save(); render(); 
+      }
     });
   }
-
   m.style.left = e.pageX + 'px';
   m.style.top = e.pageY + 'px';
 }
@@ -150,7 +157,12 @@ function addProject() {
 function loadJob(p, j) {
   curP = p; curJ = j;
   const o = projects[p][j];
-  ['d','w','bb','ca','l','t'].forEach(id => document.getElementById(id).value = o[id]);
+  document.getElementById('d').value = o.d;
+  document.getElementById('w').value = o.w;
+  document.getElementById('bb').value = o.bb;
+  document.getElementById('ca').value = o.ca;
+  document.getElementById('l').value = o.l;
+  document.getElementById('t').value = o.t;
   document.getElementById('title').textContent = p + ' → ' + j;
   calculate();
   render();
@@ -167,41 +179,62 @@ function saveJob() {
     t: +document.getElementById('t').value
   };
   save();
-  alert('Job saved!');
+  alert('Job saved perfectly!');
 }
 
 function calculate() {
   const dIn = +document.getElementById('d').value || 0,
-        w   = +document.getElementById('w').value || 0,
-        bb  = +document.getElementById('bb').value || 0,
-        ca  = +document.getElementById('ca').value || 0,
+        wFt = +document.getElementById('w').value || 0,
+        bb = +document.getElementById('bb').value || 0,
+        ca = +document.getElementById('ca').value || 0,
         len = +document.getElementById('l').value || 0,
         tcy = +document.getElementById('t').value || 1.8;
 
-  const dFt = dIn/12, r = dFt/2, pipeA = Math.PI*r*r;
-  const bedH = bb + r, covH = r + ca;
-  const bedCY = (w * bedH * len / 27) - (pipeA * len / 2 / 27);
-  const covCY = (w * covH * len / 27) - (pipeA * len / 2 / 27);
-  const totCY = bedCY + covCY;
+  const dFt = dIn / 12;
+  const r = dFt / 2;
+  const pipeArea = Math.PI * r * r;
+
+  const beddingHeight = bb + r;           // from trench bottom to springline
+  const coverHeight = r + ca;             // from springline to top of cover
+
+  const beddingCY = (wFt * beddingHeight * len / 27) - (pipeArea * len / 27);
+  const coverCY   = (wFt * coverHeight   * len / 27) - (pipeArea * len / 27);
+  const totalCY  = beddingCY + coverCY;
 
   document.getElementById('results').innerHTML = `
-    <div class="card bed"><b>BEDDING</b><br>${bedCY.toFixed(2)} CY<br><b>${(bedCY*tcy).toFixed(1)} Tons</b></div>
-    <div class="card cov"><b>COVER</b><br>${covCY.toFixed(2)} CY<br><b>${(covCY*tcy).toFixed(1)} Tons</b></div>
-    <div class="card tot"><b>TOTAL</b><br>${totCY.toFixed(2)} CY • ${(totCY*tcy).toFixed(1)} Tons</b></div>
+    <div class="card bed"><b>BEDDING</b><br>${beddingCY.toFixed(2)} CY<br><b>${(beddingCY*tcy).toFixed(1)} Tons</b></div>
+    <div class="card cov"><b>COVER</b><br>${coverCY.toFixed(2)} CY<br><b>${(coverCY*tcy).toFixed(1)} Tons</b></div>
+    <div class="card tot"><b>TOTAL</b><br>${totalCY.toFixed(2)} CY • ${(totalCY*tcy).toFixed(1)} Tons</b></div>
   `;
 
-  const svg = document.getElementById('svg'); svg.innerHTML = '';
-  const s = 80, cx = 200, yb = 360, totH = bb + dFt + ca;
-  svg.innerHTML += `<rect x="${cx-w*s/2}" y="${yb-totH*s}" width="${w*s}" height="${totH*s}" fill="none" stroke="#333" stroke-width="3"/>`;
-  svg.innerHTML += `<rect x="${cx-w*s/2}" y="${yb-bedH*s}" width="${w*s}" height="${bedH*s}" fill="#e67e22" opacity="0.65"/>`;
-  svg.innerHTML += `<rect x="${cx-w*s/2}" y="${yb-(bedH+ca)*s}" width="${w*s}" height="${ca*s}" fill="#3498db" opacity="0.65"/>`;
-  const py = yb - bb*s - r*s;
-  svg.innerHTML += `<circle cx="${cx}" cy="${py}" r="${r*s}" fill="#2c3e50"/>`;
-  svg.innerHTML += `<text x="${cx}" y="${py+6}" text-anchor="middle" fill="white" font-size="14">${dIn.toFixed(1)}"</text>`;
+  // Draw SVG
+  const svg = document.getElementById('svg');
+  svg.innerHTML = '';
+  const scale = 80;
+  const cx = 200;
+  const bottomY = 360;
+  const totalHeight = bb + dFt + ca;
+
+  // Trench rectangle
+  svg.innerHTML += `<rect x="${cx - wFt*scale/2}" y="${bottomY - totalHeight*scale}" width="${wFt*scale}" height="${totalHeight*scale}" fill="none" stroke="#333" stroke-width="3"/>`;
+  // Bedding (orange)
+  svg.innerHTML += `<rect x="${cx - wFt*scale/2}" y="${bottomY - beddingHeight*scale}" width="${wFt*scale}" height="${beddingHeight*scale}" fill="#e67e22" opacity="0.65"/>`;
+  // Cover (blue)
+  svg.innerHTML += `<rect x="${cx - wFt*scale/2}" y="${bottomY - (beddingHeight + ca)*scale}" width="${wFt*scale}" height="${ca*scale}" fill="#2980b9" opacity="0.65"/>`;
+  // Pipe
+  const pipeY = bottomY - bb*scale - r*scale;
+  svg.innerHTML += `<circle cx="${cx}" cy="${pipeY}" r="${r*scale}" fill="#2c3e50"/>`;
+  svg.innerHTML += `<text x="${cx}" y="${pipeY+6}" text-anchor="middle" fill="white" font-size="16">${dIn.toFixed(1)}"</text>`;
 }
 
+// Live update + close context menu on click outside
 document.querySelectorAll('input').forEach(i => i.addEventListener('input', calculate));
-document.addEventListener('click', () => { const m = document.getElementById('ctx'); if(m) m.remove(); });
+document.addEventListener('click', () => {
+  const m = document.getElementById('ctx');
+  if(m) m.remove();
+});
+
+// Init
 render();
 calculate();
 </script>
